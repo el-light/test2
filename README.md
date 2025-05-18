@@ -101,6 +101,43 @@ The selection phase is carried out in two passes:
 
 After selection, `record_timeline()` writes a single character for each task into the global timeline matrix: `'R'` for currently running, `'.'` for pending, and `'_'` for finished. Because this happens exactly once per round, producing the mandatory `[===Results===]` section at the end is a trivial dump of that matrix.
 
+### Pseudocode Summary
+
+text
+Initialize running_heap and pending_heap
+
+For each time step t from 0 to END_STEP - 1:
+    Initialize empty lists: running_procs, pending_procs
+    cpu_used ← 0
+
+    // Step 1: Collect active processes into pending heap
+    For each process p in workload:
+        If p.ts ≤ t ≤ p.tf:
+            insert p into pending_heap (by priority)
+
+    // Step 2: Fill the CPU greedily
+    While pending_heap is not empty:
+        p ← extract_max(pending_heap)
+        If cpu_used + p.prio ≤ MAX_CPU:
+            insert p into running_heap
+            cpu_used ← cpu_used + p.prio
+        Else:
+            add p to pending_procs
+            If p was running before:
+                p.idle ← p.idle + 1
+                p.tf ← original_tf[p.pid] + p.idle
+
+    // Step 3: Extract running processes into list
+    While running_heap is not empty:
+        p ← extract_max(running_heap)
+        add p to running_procs
+
+    // Step 4: Record this round’s timeline
+    record_timeline(t, running_procs, pending_procs)
+
+
+
+
 **Complexity:**
 
 * Only `P` tasks (with `P ≤ 10` in the instructor’s workloads) are sorted each round.
